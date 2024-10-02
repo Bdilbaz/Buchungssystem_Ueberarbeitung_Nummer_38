@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetingraum Buchung</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #F5F5F5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #84BD22;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        h1 {
+            margin: 0;
+            color: #fff;
+        }
+        .date-navigation {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            right: 20px;
+        }
+        .date-header {
+            font-size: 1.5em;
+            margin: 0 10px;
+        }
+        .arrow, .calendar-icon {
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        .arrow {
+            font-size: 2em;
+            color: #fff;
+        }
+        .calendar-icon {
+            width: 30px;
+            height: 30px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .time-block {
+            border: 1px solid #299E8E;
+            border-radius: 5px;
+            padding: 20px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            background-color: #84BD22;
+            text-align: center;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: black;
+        }
+        .booked {
+            background-color: #fff;
+            color: #299E8E;
+        }
+        .modal, .confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content, .confirm-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 350px;
+            text-align: center;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #299E8E;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: space-between; /* Gleichmäßig verteilen */
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #84BD22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            height: 40px;
+            margin: 0 5px;
+            width: 45%;
+        }
+        .btn:hover {
+            background-color: #299E8E;
+        }
+        .feedback-popup {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #84BD22;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Meetingraum 1 - Buchungssystem</h1>
+        <div class="date-navigation">
+            <span class="arrow" id="prevDay">&lt;</span> <!-- Linker Pfeil -->
+            <div class="date-header" id="currentDate"></div>
+            <span class="arrow" id="nextDay">&gt;</span> <!-- Rechter Pfeil -->
+            <img src="calendar-icon.png" alt="Kalender" class="calendar-icon" id="calendarIcon">
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Zeitblocke -->
+        <div class="grid" id="timeSlots"></div>
+    </div>
+
+    <!-- Bestätigungsmodal -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-modal-content">
+            <span class="close" id="closeConfirmModal">&times;</span>
+            <h3>Sind Sie sicher, dass Sie diesen Slot buchen möchten?</h3>
+            <p id="confirmDetails"></p>
+            <div class="modal-footer">
+                <button class="btn" id="confirmBooking">Ja, buchen</button>
+                <button class="btn" id="cancelBooking">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snackbar Feedback Popup -->
+    <div class="feedback-popup" id="feedbackPopup"></div>
+
+    <script>
+        const currentDateElement = document.getElementById('currentDate');
+        const feedbackPopup = document.getElementById('feedbackPopup');
+        let currentDate = new Date();
+
+        function updateDateDisplay() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            currentDateElement.textContent = currentDate.toLocaleDateString('de-DE', options);
+        }
+
+        updateDateDisplay();
+
+        document.getElementById('prevDay').addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() - 1);
+            updateDateDisplay();
+        });
+
+        document.getElementById('nextDay').addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() + 1);
+            updateDateDisplay();
+        });
+
+        document.getElementById('calendarIcon').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'date';
+            input.style.display = 'none';
+            document.body.appendChild(input);
+            input.focus();
+            input.addEventListener('change', () => {
+                currentDate = new Date(input.value);
+                updateDateDisplay();
+                document.body.removeChild(input);
+            });
+            input.click();
+        });
+
+        function showFeedback(message) {
+            feedbackPopup.textContent = message;
+            feedbackPopup.style.display = 'block';
+            setTimeout(() => {
+                feedbackPopup.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
